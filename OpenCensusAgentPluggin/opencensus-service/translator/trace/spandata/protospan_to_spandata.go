@@ -17,6 +17,7 @@ package spandata
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"go.opencensus.io/trace"
@@ -31,6 +32,7 @@ var errNilSpan = errors.New("expected a non-nil span")
 
 // ProtoSpanToOCSpanData transforms a protobuf span into the equivalent trace.SpanData one.
 func ProtoSpanToOCSpanData(span *tracepb.Span) (*trace.SpanData, error) {
+	fmt.Println("tranlate protobuf to OpenCensus Go spanData")
 	if span == nil {
 		return nil, errNilSpan
 	}
@@ -59,6 +61,16 @@ func ProtoSpanToOCSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 		Annotations:     protoTimeEventsToOCAnnotations(span.TimeEvents),
 		HasRemoteParent: protoSameProcessAsParentToOCHasRemoteParent(span.SameProcessAsParentSpan),
 	}
+
+	fmt.Println("OC protobuf")
+	fmt.Println(span)
+	fmt.Println("")
+	fmt.Println("span trace state")
+	fmt.Println(span.Tracestate)
+	fmt.Println("")
+	fmt.Println("Go spandData from OC protobuf")
+	fmt.Println(sd)
+	fmt.Println("")
 
 	return sd, nil
 }

@@ -16,8 +16,11 @@ package octrace
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"os"
 
 	"go.opencensus.io/trace"
 
@@ -90,6 +93,40 @@ var errTraceExportProtocolViolation = errors.New("protocol violation: Export's f
 
 const receiverTagValue = "oc_trace"
 
+type mdsdJSON struct {
+	Tag    string          `json:"TAG"`
+	Source string          `json:"SOURCE"`
+	Data   *data.TraceData `json:"DATA"`
+}
+
+// SendTraceDataToFile sends trace in json format to a file
+func SendTraceDataToFile(td *data.TraceData) error {
+	trace := new(mdsdJSON) // trace contains a group of spans
+	trace.Data = td
+	byteData, _ := json.Marshal(trace)
+
+	f, err := os.OpenFile("data1.json", os.O_APPEND|os.O_WRONLY, 0644)
+
+	defer f.Close()
+	//err := ioutil.WriteFile("data1.json", byteData, 0644)
+	if err != nil {
+		fmt.Println("Pollo could not create file")
+		return err //log.Fatal("Pollo could not create file")
+	}
+
+	_, err = fmt.Fprintln(f, string(byteData))
+	//f.Write(byteData)
+	if err != nil {
+		fmt.Println("Pollo could not write to file")
+		return err //log.Fatal("Pollo could not create file")
+	}
+
+	fmt.Println("byte data boi")
+	fmt.Println(string(byteData))
+
+	return nil
+}
+
 // Export is the gRPC method that receives streamed traces from
 // OpenCensus-traceproto compatible libraries/applications.
 func (ocr *Receiver) Export(tes agenttracepb.TraceService_ExportServer) error {
@@ -101,6 +138,10 @@ func (ocr *Receiver) Export(tes agenttracepb.TraceService_ExportServer) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("This first message MUST be non-nil node")
+	fmt.Println(recv)
+	fmt.Println("")
 
 	// Check the condition that the first message has a non-nil Node.
 	if recv.Node == nil {
@@ -128,6 +169,10 @@ func (ocr *Receiver) Export(tes agenttracepb.TraceService_ExportServer) error {
 			Spans:        recv.Spans,
 			SourceFormat: "oc_trace",
 		}
+		fmt.Println("This is trace data")
+		fmt.Println(td)
+		fmt.Println("")
+		SendTraceDataToFile(td)
 
 		ocr.messageChan <- &traceDataWithCtx{data: td, ctx: ctxWithReceiverName}
 
