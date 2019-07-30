@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonitoringManagement version="1.0" namespace="TuxTest" eventVersion="1"
+                      timestamp="2014-10-01T20:00:00.000">
+  <!--
+  If the value of the file attribute is not an absolute pathname, the path is assumed to
+  be specified relative to the default mdsd configuration directory (/etc/mdsd.d/).
+  
+  As in the Windows MA configuration file, any attributes of the <MonitoringManagement>
+  element within imported files are ignored.
+  -->
+  <Imports>
+ 
+  </Imports>
+
+  <!--
+  Most of these forms assume that Azure Service Configuration Settings (ACS) are
+  available, which appears to be untrue for Linux IaaS virtuals.
+  -->
+  <Accounts>
+    <!-- <Account moniker="MySvcMDS" isDefault="true" autoKey="true" /> -->
+<Account moniker="MySvcMDS" isDefault="true" account="omstestvmdiag" tableEndpoint="https://omstestvmdiag.table.core.windows.net" key="__key_here__"/>
+  </Accounts>
+
+  <!--
+  The Management element is similar to that supported by the Windows MA, but there's
+  no ability to run arbitrary code. An IdentityComponent can be a fixed string, it can
+  be the value of an environment variable, or it can be the hostname of the server
+  where mdsd is running.
+  
+  As with the Windows MA, the first Management element encountered while loading config
+  files will have take effect; all others are ignored.
+  -->
+  <Management eventVolume="Large" defaultRetentionInDays="90" >
+    <Identity>
+      <IdentityComponent name="Tenant">myTestTenant</IdentityComponent>      
+      <IdentityComponent name="Host" useComputerName="true" />
+    </Identity>
+    <AgentResourceUsage diskQuotaInMB="50000" />
+  </Management>
+
+  <!--
+  A <Schema> has a name, used to link it to one or more event sources, and contains a
+  sequence of columns.
+  
+  Each column has a name, an augmented JSON source type, and a target MDS type.
+  -->
+  <Schemas>
+    <Schema name="test1">
+      <Column name="Facility" type="str" mdstype="mt:wstr" />
+    </Schema>
+    <Schema name="syslog">
+      <Column name="Facility" type="str" mdstype="mt:wstr" />
+      <Column name="Severity" type="str" mdstype="mt:int32" />
+      <Column name="EventTime" type="str-rfc3339" mdstype="mt:utc" />
+      <Column name="Computer" type="str" mdstype="mt:wstr" />
+      <Column name="SyslogMessage" type="str" mdstype="mt:wstr" />
+      <Column name="SyslogTag" type="str" mdstype="mt:wstr" />
+    </Schema>
+    <Schema name="ocTrace">                                                                 
+        <Column name="WholeTrace" type="str" mdstype="mt:wstr" />
+    </Schema>
+  </Schemas>
+
+  <Sources>
+    <Source name="syslog" schema="syslog" />
+    <Source name="funnel" schema="ocTrace" />	
+  </Sources>
+
+  <!--
+  All events are specified within Events elements. Multiple events can specify the same
+  eventName; that will cause the corresponding rows to be written to the same table.
+  -->
+  <Events>
+
+    <!--
+    Heartbeat events supported without change.
+    -->
+   
+
+    <!--
+    Counter data is requested from the OMI daemon. A set of standardized cross-platform
+    providers, built by the System Center team, is included. Additional providers can be
+    built and injected at run-time.
+    
+    omiNamespace identifies the provider responsible for supplying the information.
+    
+    cqlQuery is a CIM Query Language expression which produces one or more columns of
+    data. Each row returned by the query is augmented by the usual identity columns
+    (Tenant, Role, RoleInstance) and inserted into the table.
+    
+    The stock OMI Server supports only CQL Basic Query, and is actually even more limited
+    than that. For example, while the LIKE operator is supported in WHERE clauses, the
+    OMI server does not handle even Basic Regular Expressions, nor any wildcarding at
+    all.
+    -->
+   
+
+    <!--
+    MdsdEvents are sent by event providers directly to mdsd via loopback socket.
+    
+    Each event has a source; a single provider can send events from multiple sources, and
+    multiple providers can each send events from the same source.
+    
+    All events from a single source conform to the same schema, specified in a Schemas
+    element; the association between schema and source is made in a Sources element.
+    
+    Each MdsdEvent element contains routings for events from a single source.
+    
+    Each RouteEvent directs a set (or subset) of events to a destination table
+    (identified by eventName). If no Filter elements are specified, all events from the
+    source are added to the destination table; otherwise, the event is added only if all
+    Filters evaluate as true. If multiple RouteEvents using the same eventName match
+    (i.e. their Filters all evaluate as true), the event will be added to the table only
+    once.
+    
+    The upload frequency for a destination table is that of the highest priority event
+    routed to that table. Routing a high priority event to a table can cause normal
+    priority events to be delivered sooner than the next five-minute interval.
+    -->
+    <MdsdEvents>
+	    <MdsdEventSource source="funnel">
+        <RouteEvent eventName="SyslogTest" duration="PT1S" priority="High" storeType="file">          
+        </RouteEvent>        
+      </MdsdEventSource>
+    </MdsdEvents> 
+
+
+  </Events>
+  
+  <EventStreamingAnnotations>
+    <EventStreamingAnnotation name="SyslogTest">
+       <OMS>
+         <Content>
+         <!-- SAME WORKSPACE INFORMATION THAT WAS GIVEN TO ME -->
+         </Content>
+       </OMS>
+    </EventStreamingAnnotation>
+	</EventStreamingAnnotations>
+</MonitoringManagement>
