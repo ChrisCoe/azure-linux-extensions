@@ -33,6 +33,7 @@ import (
 	"github.com/census-instrumentation/opencensus-service/consumer"
 	"github.com/census-instrumentation/opencensus-service/internal/config"
 	"github.com/census-instrumentation/opencensus-service/internal/config/viperutils"
+	"github.com/census-instrumentation/opencensus-service/exporter/exporterwrapper"
 	"github.com/census-instrumentation/opencensus-service/internal/pprofserver"
 	"github.com/census-instrumentation/opencensus-service/internal/version"
 	"github.com/census-instrumentation/opencensus-service/observability"
@@ -104,6 +105,13 @@ func runOCAgent() {
 	if err != nil {
 		log.Fatalf("Config: failed to create exporters from YAML: %v", err)
 	}
+
+	// Create exporter wrapper to trigger process to push out OC proto data so it can be intercepted and sent to 1Agent
+	emptyTraceExporter, err := exporterwrapper.NewExporterWrapper("emptyExporter", "ocservice.exporter.Empty.ConsumeTraceData", nil)
+	if err != nil {
+		log.Fatalf("Could not create exporter wrapper: %v", err)
+	}
+	traceExporters = append(traceExporters, emptyTraceExporter)
 
 	commonSpanSink := multiconsumer.NewTraceProcessor(traceExporters)
 
