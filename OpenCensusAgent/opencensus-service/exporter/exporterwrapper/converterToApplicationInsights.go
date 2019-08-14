@@ -26,9 +26,8 @@ func getHostName() string {
 	return hostName
 }
 
-func ConvertOCSpanDataToApplicationInsightsSchema(sd *trace.SpanData) string {
+func ConvertOCSpanDataToApplicationInsightsSchema(sd *trace.SpanData) (tags string, timeData string, name string, data string) {
 	envelope := Envelope{
-		IKey: os.Getenv("APPLICATIONINSIGHTS_KEY"),
 		Tags: AzureMonitorContext,
 		Time: FormatTime(sd.StartTime),
 	}
@@ -88,12 +87,20 @@ func ConvertOCSpanDataToApplicationInsightsSchema(sd *trace.SpanData) string {
 		}
 	}
 
-	bytesRepresentation, err := json.Marshal(envelope)
+	bytesRepresentationForTags, err := json.Marshal(envelope.Tags)
+	if err != nil {
+		fmt.Println(err)
+	}
+	bytesRepresentationForDataToSend, err := json.Marshal(envelope.DataToSend)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	return string(bytesRepresentation)
+	tags = string(bytesRepresentationForTags)
+	timeData = envelope.Time
+	name = envelope.Name
+	data = string(bytesRepresentationForDataToSend)
+	return
 }
 
 const (
@@ -146,7 +153,6 @@ type Data struct {
 }
 
 type Envelope struct {
-	IKey       string                 `json:"iKey"`
 	Tags       map[string]interface{} `json:"tags"`
 	Name       string                 `json:"name"`
 	Time       string                 `json:"time"`

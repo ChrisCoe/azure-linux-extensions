@@ -69,8 +69,7 @@ func PushOcProtoSpansToOCTraceExporter(ocExporter trace.Exporter, td data.TraceD
 	var goodSpans []*tracepb.Span
 	for _, span := range td.Spans {
 		sd, err := spandatatranslator.ProtoSpanToOCSpanData(span)
-		spanData := ConvertOCSpanDataToApplicationInsightsSchema(sd)
-		SendSpanTo1Agent(spanData)
+		SendSpanTo1Agent(ConvertOCSpanDataToApplicationInsightsSchema(sd))
 		if err == nil {
 			//ocExporter.ExportSpan(sd) // We don't export here and instead let the 1Agent export the span
 			goodSpans = append(goodSpans, span)
@@ -89,22 +88,26 @@ type mdsdJSON struct {
 }
 
 // SendTraceTo1Agent makes a connection to 1Agent and passes in the OpenCensus proto trace in JSON format
-func SendSpanTo1Agent(spanData string) {
-	log.Println("Starting funnel of data.")
+func SendSpanTo1Agent(tags string, timeData string, name string, data string) {
+	log.Println("Starting funnel of data.") // comment out
 
 	conn, err := net.Dial("unix", "/var/run/mdsd/default_json.socket")
 	if err != nil {
 		log.Printf("Error connecting: %v", err)
 		return
 	}
+	// Schema is defined in mdsd.xml
 	dataList := []string{
-		spanData, //WholeTrace, this part is defined in schema found in mdsd.xml
+		tags,     // Tags
+		timeData, // Time
+		name,     // Name
+		data,     // Data
 	}
 	id := time.Now().UTC()
 
 	trace := new(mdsdJSON)
 	trace.Tag = strconv.FormatInt(id.UnixNano(), 10) // Use time to create a unique Tag
-	trace.Source = "funnel"                      // "funnel" defined in schema
+	trace.Source = "funnel"                          // "funnel" defined in schema
 	trace.Data = dataList
 
 	byteData, err := json.Marshal(trace)
@@ -123,5 +126,6 @@ func SendSpanTo1Agent(spanData string) {
 		log.Printf("Error reading 1Agent connection:%v", err)
 		return
 	}
+	// comment out
 	fmt.Println(line) // Tag returned from 1Agent
 }
